@@ -1,0 +1,106 @@
+---
+title: "Analysis of the NOAA Storm Database"
+author: "Gilda M Castro"
+date: "7/8/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data Preprocessing
+The data has been downloaded previously into the local machine. The information is loaded in the variable _storm_data_.
+```{r read_file}
+storm_data <- read.csv("repdata_data_StormData.csv")
+storm_data$UPPER_EVTYPE <- toupper(storm_data$EVTYPE)
+```
+
+We need to load _ggplot2_ and _dplyr_.
+```{r libraries_load}
+library(ggplot2)
+library(dplyr)
+```
+
+## Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+
+The data provides fatalities (FATALITIES in the data) and injuries (INJURIES in the data). I will consider these as most harmfull with respect to population health.
+The calculation of the casualties is the additoin of fatalities and injuries.
+
+```{r event_summary}
+events <- aggregate(list(fatalities=storm_data$FATALITIES,injuries=storm_data$INJURIES) , by= list(event=storm_data$UPPER_EVTYPE), FUN = sum)
+events_ordered <- events[order( -(events$fatalities+events$injuries)),]
+events_top20 <- head(events_ordered, 20)
+events_top20$casualties <- events_top20$fatalities+events_top20$injuries
+
+plot_casualties <- ggplot(events_top20, aes(x=event, y=casualties))
+
+plot_casualties + geom_bar(stat="identity") + labs(title="Top 20 Events by Casualties", x= "Event type", y= "Counts") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+Summarizing the information, we can denote that the Tornadoes are the most dangerous events in the US as they affect the most the Health of the persons due to the fact that they produce the most casualties.
+
+## Across the United States, which types of events have the greatest economic consequences?
+
+We need to understand the economic consequences of the damages caused by the events. In this case, the documentation: https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf, page 12, states that _damage_ is measured in dollars.
+
+The datase doesn't have a dollar amount per se, but it has four columns referring to 
+_damage_ which are: 
+PROPDMG
+PROPDMGEXP
+CROPDMG
+CROPDMGEXP
+
+The EXP columns specify the unit, like K for Thousands, B for Billion, M for Millions.
+
+```{r economic_dataset}
+storm_data_economic <- storm_data[c("UPPER_EVTYPE", "CROPDMG", "CROPDMGEXP", "PROPDMG", "PROPDMGEXP")]
+#Set the values to lower case, in case there are different
+storm_data_economic$PROPDMGEXP = tolower(storm_data_economic$PROPDMGEXP)
+storm_data_economic$CROPDMGEXP = tolower(storm_data_economic$CROPDMGEXP)
+
+exponent <- function(units) { 
+  if (units == 'k') 1000 
+  else if (units == 'm') 1000000 
+  else if (units == 'b') 1000000000  
+  else 1
+}
+
+#Setting default values in empty cells
+storm_data_economic$CROPDMG[is.na(storm_data_economic$CROPDMG)] <- 0
+storm_data_economic$PROPDMG[is.na(storm_data_economic$PROPDMG)] <- 0
+
+#Adding a Value column
+storm_data_economic$CROPDMGEXP_VAL <- exponent(storm_data_economic$CROPDMGEXP)
+storm_data_economic$PROPDMGEXP_VAL <- exponent(storm_data_economic$PROPDMGEXP)
+
+#Calculate the damage value in dollars
+storm_data_economic$CROPDMG_VAL = storm_data_economic$CROPDMG * storm_data_economic$CROPDMGEXP_VAL
+storm_data_economic$PROPDMG_VAL = storm_data_economic$PROPDMG * storm_data_economic$PROPDMGEXP_VAL
+
+```
+
+Now we can aggregate the data by event type. The damage is measured by adding cropdmg and propdmg.
+
+```{r event_economic_dataset}
+
+events_economic <- aggregate(list(crop_dmg=storm_data_economic$CROPDMG_VAL,prop_dmg=storm_data_economic$PROPDMG_VAL) , by= list(event=storm_data_economic$UPPER_EVTYPE), FUN = sum)
+
+events_economic_ordered <- events_economic[order( -(events_economic$crop_dmg+events_economic$prop_dmg)),]
+events_economic_top20 <- head(events_economic_ordered, 20)
+
+events_economic_top20$damage <- events_economic_top20$crop_dmg + events_economic_top20$prop_dmg
+
+events_economic_top20$damage_M <- (events_economic_top20$crop_dmg + events_economic_top20$prop_dmg) / 1000000
+
+plot_damage <- ggplot(events_economic_top20, aes(x=event, y=damage_M))
+
+plot_damage + geom_bar(stat="identity") + labs(title="Top 20 Events by Economic Consequences", x= "Event type", y= "Million Dollars") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+## Results
+Tornadoes are the most harmful event type with respect to population health and  also have the greatest economic consequences in the US.
