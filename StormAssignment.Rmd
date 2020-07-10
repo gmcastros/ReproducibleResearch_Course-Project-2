@@ -10,8 +10,18 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+## Synopsis
+This is the Coursera assignment of _Reproducible Research_ and its description is "Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
 
-## Data Preprocessing
+This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage."
+
+We are analysing the data from the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database to answer the following questions:
+1. Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+2. Across the United States, which types of events have the greatest economic consequences?
+
+The result of the analysis shows that tornadoes are the most harmful event type with the greates economic consequences in the US.
+
+## Data Processing
 The data has been downloaded previously into the local machine. The information is loaded in the variable _storm_data_.
 ```{r read_file}
 storm_data <- read.csv("repdata_data_StormData.csv")
